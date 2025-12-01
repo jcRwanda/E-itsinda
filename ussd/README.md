@@ -1,6 +1,6 @@
 # E-Itsinda USSD Service
 
-This folder contains the USSD interface for the E-Itsinda platform, enabling feature phone users to manage savings groups via Africa's Talking USSD gateway.
+the USSD interface for the E-Itsinda platform, enabling feature phone users to manage savings groups via Africa's Talking USSD gateway.
 
 ## Quick Start
 
@@ -95,90 +95,3 @@ ussd/
 ├── package.json    # Dependencies and scripts
 └── README.md       # This file
 ```
-
-### app.js
-Main Express server configuration:
-- Body parser middleware for form data
-- USSD route mounted at `/ussd/eitsinda`
-- Homepage route
-- Error handlers
-
-### index.js
-USSD business logic:
-- `normalizePhoneNumber()`: Converts between +250 and 0 formats
-- `groups`: In-memory storage of savings groups
-- `userGroups`: Maps phone numbers to group codes
-- `processEItsindaRequest()`: Handles menu navigation
-- POST `/` endpoint: Processes Africa's Talking callbacks
-
-## Phone Number Format
-
-The service automatically normalizes phone numbers:
-- Input: `+250781230980` → `0781230980`
-- Input: `0781230980` → `0781230980`
-
-Africa's Talking sends numbers in international format (+250), which is normalized internally.
-
-## Response Types
-
-- **CON**: Continue session (show menu)
-- **END**: End session (final message)
-
-## Development
-
-```bash
-# Run with auto-reload
-npm run dev
-
-# Production mode
-npm start
-```
-
-## Production Deployment
-
-The service is deployed behind OpenLiteSpeed reverse proxy:
-
-1. **Virtual Host**: ussd.garatech.rw
-2. **Proxy Target**: http://127.0.0.1:8080
-3. **Context**: `/` → External processor "ussdapp"
-
-To restart after code changes:
-```bash
-# Restart the service
-pm2 restart ussd
-
-# Or restart manually
-pkill -f "node app.js"
-npm start
-```
-
-## Dependencies
-
-- **express**: Web framework
-- **body-parser**: Parse form data from Africa's Talking
-- **africastalking**: Africa's Talking SDK (if needed for API calls)
-- **axios**: HTTP client
-- **nodemon**: Development auto-reload
-
-## Troubleshooting
-
-### Service not responding
-- Check if Node.js process is running: `ps aux | grep node`
-- Check OpenLiteSpeed status: `systemctl status lsws`
-- Verify port 8080 is listening: `netstat -tlnp | grep 8080`
-
-### Phone number not recognized
-- Ensure phone number is in correct format (0781230980 or +250781230980)
-- Check `userGroups` object in index.js for test account
-
-### Menu not displaying
-- Verify callback URL in Africa's Talking dashboard
-- Check server logs for errors
-- Test endpoint with cURL to isolate issue
-
-## Support
-
-For issues specific to:
-- Africa's Talking integration: https://help.africastalking.com
-- OpenLiteSpeed configuration: https://openlitespeed.org/support/
-- E-Itsinda platform: See main project README
