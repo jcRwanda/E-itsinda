@@ -1,58 +1,184 @@
-# E-itsinda
-e-Itsinda is a digital platform designed to modernize and strengthen Rwanda’s community saving groups (Itsinda / Ibimina). These groups play a crucial role in supporting families—especially mothers, low-income earners, youth, and informal workers—but they still rely on manual notebooks, verbal agreements, and non-standard financial tracking.
+# E-Itsinda USSD Service
 
-This project introduces a transparent, secure, and compliant digital ecosystem that helps saving groups operate efficiently and meet government requirements.
+This folder contains the USSD interface for the E-Itsinda platform, enabling feature phone users to manage savings groups via Africa's Talking USSD gateway.
 
-**🚩 Problem**
+## Quick Start
 
-Many saving groups in communities like Gahanga Sector continue to face challenges such as:
+```bash
+cd /home/garatech.rw/ussd
+npm install
+npm start
+```
 
-Miscalculations, lost records, and fund misuse
 
-Conflicts and mistrust due to lack of transparency
 
-No proper books of accounts to comply with the Government of Rwanda’s Ibimina registration requirements
+### Environment
 
-Overloaded group leaders handling all records manually
+- **Node.js**: v12.x or higher
+- **Web Server**: OpenLiteSpeed (reverse proxy)
+- **SSL**: Let's Encrypt certificate
 
-Limited digital access for mothers and members without smartphones
+## Testing
 
-Government policies exist, but no local digital tool helps saving groups record, manage, and submit the required data for compliance.
-As a result, many groups remain vulnerable, unregistered, and financially insecure.
+### Test Account
 
-**💡 Our Solution**
+A pre-configured test account is available:
 
-e-Itsinda provides a community-first digital platform designed to:
+- **Phone Number**: `0781230980` (or `+250781230980`)
+- **Group**: G999 (Indashyikirwa)
+- **Balance**: 50,000 RWF
+- **Role**: Member
 
-Digitize savings, loans, transactions, and attendance
+### Testing with Africa's Talking Simulator
 
-Automate calcuations and prevent human error
+**Official Simulator**: https://developers.africastalking.com/simulator
 
-Increase transparency and trust among members
+1. Sign in to your Africa's Talking account
+2. Navigate to the Sandbox Simulator
+3. Select **USSD** tab
+4. Enter phone number: `+250781230980`
+5. Enter USSD code: `*384*1309#`
+6. Click **Dial**
+7. Interact with the menu by entering numbers and submitting
 
-Enable compliance with national Ibimina registration standards
 
-Generate simple digital reports for leaders
 
-Support both mobile app and USSD for mothers and members without smartphones
 
-(Upcoming) Integrate blockchain for secure, tamper-proof financial records
+### Testing with cURL
 
-Provide dashboards for promoters, NGOs, and sector-level administrators
+```bash
+# Main menu
+curl -X POST https://ussd.garatech.rw/ussd/eitsinda \
+  -d "sessionId=test123" \
+  -d "serviceCode=*384*1309#" \
+  -d "phoneNumber=%2B250781230980" \
+  -d "text="
 
-We already have an MVP, and the next phase is building a blockchain-enabled version for improved trust and transparency.
+# View balance (option 1)
+curl -X POST https://ussd.garatech.rw/ussd/eitsinda \
+  -d "sessionId=test123" \
+  -d "serviceCode=*384*1309#" \
+  -d "phoneNumber=%2B250781230980" \
+  -d "text=1"
 
-**🌍 Why It Matters**
+# View group info (option 2)
+curl -X POST https://ussd.garatech.rw/ussd/eitsinda \
+  -d "sessionId=test123" \
+  -d "serviceCode=*384*1309#" \
+  -d "phoneNumber=%2B250781230980" \
+  -d "text=2"
+```
 
-Saving groups are the backbone of community resilience.
-Digitalizing them restores:
+## Menu Structure
 
-Financial transparency
+```
+Main Menu
+├── 1. Reba amafaranga yawe (View Balance)
+├── 2. Reba amakuru y'itsinda (View Group Info)
+├── 3. Kwinjira mu itsinda (Join Group)
+├── 4. Gusohoka mu itsinda (Leave Group)
+├── 5. Gutanga inguzanyo (Request Loan)
+├── 6. Kwishyura inguzanyo (Pay Loan)
+└── 7. Amateka y'ibikorwa (Transaction History)
 
-Trust between members
+Navigation:
+- 0. Subira/Gusohoka (Back/Exit)
+- 00. Ahabanza (Main Menu)
+```
 
-Economic security for mothers and vulnerable groups
+## File Structure
 
-Compliance with government policies
+```
+ussd/
+├── app.js          # Express server setup
+├── index.js        # USSD menu logic and routing
+├── package.json    # Dependencies and scripts
+└── README.md       # This file
+```
 
-Starting with Gahanga Sector, this project will scale across Rwanda to support all Ibimina.
+### app.js
+Main Express server configuration:
+- Body parser middleware for form data
+- USSD route mounted at `/ussd/eitsinda`
+- Homepage route
+- Error handlers
+
+### index.js
+USSD business logic:
+- `normalizePhoneNumber()`: Converts between +250 and 0 formats
+- `groups`: In-memory storage of savings groups
+- `userGroups`: Maps phone numbers to group codes
+- `processEItsindaRequest()`: Handles menu navigation
+- POST `/` endpoint: Processes Africa's Talking callbacks
+
+## Phone Number Format
+
+The service automatically normalizes phone numbers:
+- Input: `+250781230980` → `0781230980`
+- Input: `0781230980` → `0781230980`
+
+Africa's Talking sends numbers in international format (+250), which is normalized internally.
+
+## Response Types
+
+- **CON**: Continue session (show menu)
+- **END**: End session (final message)
+
+## Development
+
+```bash
+# Run with auto-reload
+npm run dev
+
+# Production mode
+npm start
+```
+
+## Production Deployment
+
+The service is deployed behind OpenLiteSpeed reverse proxy:
+
+1. **Virtual Host**: ussd.garatech.rw
+2. **Proxy Target**: http://127.0.0.1:8080
+3. **Context**: `/` → External processor "ussdapp"
+
+To restart after code changes:
+```bash
+# Restart the service
+pm2 restart ussd
+
+# Or restart manually
+pkill -f "node app.js"
+npm start
+```
+
+## Dependencies
+
+- **express**: Web framework
+- **body-parser**: Parse form data from Africa's Talking
+- **africastalking**: Africa's Talking SDK (if needed for API calls)
+- **axios**: HTTP client
+- **nodemon**: Development auto-reload
+
+## Troubleshooting
+
+### Service not responding
+- Check if Node.js process is running: `ps aux | grep node`
+- Check OpenLiteSpeed status: `systemctl status lsws`
+- Verify port 8080 is listening: `netstat -tlnp | grep 8080`
+
+### Phone number not recognized
+- Ensure phone number is in correct format (0781230980 or +250781230980)
+- Check `userGroups` object in index.js for test account
+
+### Menu not displaying
+- Verify callback URL in Africa's Talking dashboard
+- Check server logs for errors
+- Test endpoint with cURL to isolate issue
+
+## Support
+
+For issues specific to:
+- Africa's Talking integration: https://help.africastalking.com
+- OpenLiteSpeed configuration: https://openlitespeed.org/support/
+- E-Itsinda platform: See main project README
