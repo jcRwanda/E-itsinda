@@ -6,13 +6,11 @@ validator loan_validator(
   redeemer: LoanRedeemer,
   ctx: ScriptContext
 ) {
-    -- Borrower repayment
-    if redeemer is Repay then
-        tx_signed_by(ctx, datum.borrower),
-        upper_bound(tx_valid_range(ctx)) <= datum.deadline
-
-    -- Lender liquidation
-    else
-        tx_signed_by(ctx, datum.lender),
-        lower_bound(tx_valid_range(ctx)) > datum.deadline
+    if redeemer == Repay {
+        expect tx_signed_by(ctx, datum.borrower)
+        expect upper_bound(tx_valid_range(ctx)) <= datum.deadline
+    } else {
+        expect tx_signed_by(ctx, datum.lender)
+        expect lower_bound(tx_valid_range(ctx)) > datum.deadline
+    }
 }
