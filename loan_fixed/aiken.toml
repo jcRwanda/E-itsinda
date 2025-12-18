@@ -1,7 +1,7 @@
 name = "itsinda/loan_fixed"
 version = "0.0.0"
-compiler = "v1.1.15"
-plutus = "v3"
+compiler = "v1.1.5"
+plutus = "v2"
 license = "Apache-2.0"
 description = "Aiken contracts for project 'itsinda/loan_fixed'"
 
@@ -12,7 +12,7 @@ platform = "github"
 
 [[dependencies]]
 name = "aiken-lang/stdlib"
-version = "v3.0.0"
+version = "v2.0.0"
 source = "github"
 
 [config]
