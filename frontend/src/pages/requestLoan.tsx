@@ -1,39 +1,39 @@
 import { useState } from "react";
+import { initLucidWithWallet, LoanService } from "../services/loanService";
 
-interface Props {
-  onCreate: (borrower: string, amount: number, interest: number, period: number) => void;
-}
-
-export default function RequestLoan({ onCreate }: Props) {
-  const [borrower, setBorrower] = useState("");
+export default function RequestLoan() {
   const [amount, setAmount] = useState(0);
   const [interest, setInterest] = useState(5);
   const [period, setPeriod] = useState(30); // days
+  const [loading, setLoading] = useState(false);
 
-  const handleRequest = () => {
-    onCreate(borrower, amount, interest, period);
+  const handleRequest = async () => {
+    setLoading(true);
+    try {
+      const lucid = await initLucidWithWallet();
+      const service = new LoanService(lucid);
+      const txHash = await service.requestLoan(amount, interest, period);
+      alert(`Loan requested! TxHash: ${txHash}`);
+    } catch (error) {
+      alert(`Error: ${error}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="p-6 max-w-md mx-auto">
       <h2 className="text-xl font-bold mb-4">Request a Loan</h2>
       <input
-        type="text"
-        placeholder="Borrower Name"
-        value={borrower}
-        onChange={(e) => setBorrower(e.target.value)}
-        className="border p-2 mb-2 w-full"
-      />
-      <input
         type="number"
-        placeholder="Loan Amount (RWF)"
+        placeholder="Loan Amount (ADA)"
         value={amount}
         onChange={(e) => setAmount(Number(e.target.value))}
         className="border p-2 mb-2 w-full"
       />
       <input
         type="number"
-        placeholder="Interest per period (RWF)"
+        placeholder="Interest per period (ADA)"
         value={interest}
         onChange={(e) => setInterest(Number(e.target.value))}
         className="border p-2 mb-2 w-full"
@@ -47,9 +47,10 @@ export default function RequestLoan({ onCreate }: Props) {
       />
       <button
         onClick={handleRequest}
+        disabled={loading}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
-        Request Loan
+        {loading ? "Requesting..." : "Request Loan"}
       </button>
     </div>
   );

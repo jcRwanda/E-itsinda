@@ -4,7 +4,7 @@ export async function initLucid() {
   const lucid = await Lucid.new(
     new Blockfrost(
       "https://cardano-preprod.blockfrost.io/api/v0",
-      "PASTE_BLOCKFROST_KEY_HERE"
+      import.meta.env.VITE_BLOCKFROST_API_KEY
     ),
     "Preprod"
   );
