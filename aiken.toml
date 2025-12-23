@@ -15,4 +15,8 @@ name = "aiken-lang/stdlib"
 version = "v3.0.0"
 source = "github"
 
+[[tests]]
+name = "repayment.test"
+watch = ["validators", "lib", "tests"]
+
 [config]

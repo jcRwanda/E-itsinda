@@ -1,0 +1,281 @@
+{
+  "preamble": {
+    "title": "cybercode230/repay-smart-contract",
+    "description": "Aiken contracts for project 'cybercode230/repay-smart-contract'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.21+unknown"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "repayment.repayment.spend",
+      "datum": {
+        "title": "datum_opt",
+        "schema": {
+          "$ref": "#/definitions/repayment~1LoanDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/repayment~1RepaymentRedeemer"
+        }
+      },
+      "compiledCode": "5904dd01010029800aba2aba1aba0aab9faab9eaab9dab9a488888896600264653001300800198041804800cdc3a400530080024888966002600460106ea800e26644653001159800980118059baa0018992cc004cdd7980818069baa0083010301130113011301130113011300d375400319800911919800800801912cc00400629422b3001300330140018a51899801001180a800a01e404923011301200191119199119801001000912cc00400600713233225980099b910070028acc004cdc78038014400600c80a226600a00a603400880a0dd718098009bad30140013016001405064646600200200c44b3001001801c4c8cc896600266e4402400a2b30013371e0120051001803202a899802802980d802202a375c60280026eacc054004c05c0050150a5eb7bdb1805200048896600266446600a6eb0c054c048dd5005118064c004dd5980298099baa3005301337540030038012008375c602660286028602860286028602860286028602860286028602860206ea8010dd71809980a180a180a180a180a180a180a180a180a180a180a180a180a18081baa004899911991191919912cc00660020213008301837540190044005159800cc00404266e9520003301a4c122d8799f581c000102030405060708090a0b0c0d0e0f101112131415161718191a1bff003301a4c103d87a80004bd70400d0014528c5901645901619b800020012223300c3758601060326ea800c96600266ebcc074c068dd5000801c4cdc48014c004dd59806180d1baa001a44100a44100402d14a080c0cdc199b82001375a60306032603260326032603260326032603260326032602a6ea8024dd6980c180c980c980c980c980c980c980c980c980c980c980c980a9baa0095980099b884800000a266e00004cdc199b82337040026eb4c05cc060c060c060c060c060c060c060c060c050dd50040011bad301730183018301830183018301830183018301830143754011100140486644b300133712004003148002266e0ccdc0801000a41018c148090c966002601860246ea800626eb4c058c04cdd5000c520004044602a60246ea8c054c048dd5180118091baa00a375a602a602c602c602c602c602c60246ea8018c8cdc000099b83337040026eb4c008c04cdd50039bad30163017301730173013375400e6eb4c010c048dd50031180a180a980a980a980a980a980a980a8009180a180a980a800c5900e22c8058c03cc030dd5000c5900a488c966002600a0031323259800980a80140122c8090dd7180980098079baa0038acc004c02000626464b300130150028024590121bae3013001300f37540071640348068c034dd50014c03c00d22259800980298071baa00a8992cc004c050006264b3001300730103754003132323259800980c00144cc01cc05c00c4c966002601600313259800980d000c4c8c966002601c00313259800980e800c4cc030c0700040362c80d0c060dd500145660026022003132323298009bad301e0019bad301e0039bad301e00248896600260440090128b203e180f000980e800980c1baa0028b202c4058602c6ea8004c0640062c80b8c054dd50014566002601c003159800980a9baa002804c59016459013202630133754003164054602c002602c00260226ea80062c8078c04c0062c8088c03cdd500545900d0c038c03c008c024dd50019b87480022c8038601000260066ea802229344d95900101",
+      "hash": "84f3749ef29dc264c2a34ae8c8f8c78a7737f3da908b3403f8c856fc"
+    },
+    {
+      "title": "repayment.repayment.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "5904dd01010029800aba2aba1aba0aab9faab9eaab9dab9a488888896600264653001300800198041804800cdc3a400530080024888966002600460106ea800e26644653001159800980118059baa0018992cc004cdd7980818069baa0083010301130113011301130113011300d375400319800911919800800801912cc00400629422b3001300330140018a51899801001180a800a01e404923011301200191119199119801001000912cc00400600713233225980099b910070028acc004cdc78038014400600c80a226600a00a603400880a0dd718098009bad30140013016001405064646600200200c44b3001001801c4c8cc896600266e4402400a2b30013371e0120051001803202a899802802980d802202a375c60280026eacc054004c05c0050150a5eb7bdb1805200048896600266446600a6eb0c054c048dd5005118064c004dd5980298099baa3005301337540030038012008375c602660286028602860286028602860286028602860286028602860206ea8010dd71809980a180a180a180a180a180a180a180a180a180a180a180a180a18081baa004899911991191919912cc00660020213008301837540190044005159800cc00404266e9520003301a4c122d8799f581c000102030405060708090a0b0c0d0e0f101112131415161718191a1bff003301a4c103d87a80004bd70400d0014528c5901645901619b800020012223300c3758601060326ea800c96600266ebcc074c068dd5000801c4cdc48014c004dd59806180d1baa001a44100a44100402d14a080c0cdc199b82001375a60306032603260326032603260326032603260326032602a6ea8024dd6980c180c980c980c980c980c980c980c980c980c980c980c980a9baa0095980099b884800000a266e00004cdc199b82337040026eb4c05cc060c060c060c060c060c060c060c060c050dd50040011bad301730183018301830183018301830183018301830143754011100140486644b300133712004003148002266e0ccdc0801000a41018c148090c966002601860246ea800626eb4c058c04cdd5000c520004044602a60246ea8c054c048dd5180118091baa00a375a602a602c602c602c602c602c60246ea8018c8cdc000099b83337040026eb4c008c04cdd50039bad30163017301730173013375400e6eb4c010c048dd50031180a180a980a980a980a980a980a980a8009180a180a980a800c5900e22c8058c03cc030dd5000c5900a488c966002600a0031323259800980a80140122c8090dd7180980098079baa0038acc004c02000626464b300130150028024590121bae3013001300f37540071640348068c034dd50014c03c00d22259800980298071baa00a8992cc004c050006264b3001300730103754003132323259800980c00144cc01cc05c00c4c966002601600313259800980d000c4c8c966002601c00313259800980e800c4cc030c0700040362c80d0c060dd500145660026022003132323298009bad301e0019bad301e0039bad301e00248896600260440090128b203e180f000980e800980c1baa0028b202c4058602c6ea8004c0640062c80b8c054dd50014566002601c003159800980a9baa002804c59016459013202630133754003164054602c002602c00260226ea80062c8078c04c0062c8088c03cdd500545900d0c038c03c008c024dd50019b87480022c8038601000260066ea802229344d95900101",
+      "hash": "84f3749ef29dc264c2a34ae8c8f8c78a7737f3da908b3403f8c856fc"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "Option<cardano/address/StakeCredential>": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1StakeCredential"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "aiken/crypto/ScriptHash": {
+      "title": "ScriptHash",
+      "dataType": "bytes"
+    },
+    "aiken/crypto/VerificationKeyHash": {
+      "title": "VerificationKeyHash",
+      "dataType": "bytes"
+    },
+    "cardano/address/Address": {
+      "title": "Address",
+      "description": "A Cardano `Address` typically holding one or two credential references.\n\n Note that legacy bootstrap addresses (a.k.a. 'Byron addresses') are\n completely excluded from Plutus contexts. Thus, from an on-chain\n perspective only exists addresses of type 00, 01, ..., 07 as detailed\n in [CIP-0019 :: Shelley Addresses](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019/#shelley-addresses).",
+      "anyOf": [
+        {
+          "title": "Address",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "payment_credential",
+              "$ref": "#/definitions/cardano~1address~1PaymentCredential"
+            },
+            {
+              "title": "stake_credential",
+              "$ref": "#/definitions/Option<cardano~1address~1StakeCredential>"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/address/Credential": {
+      "title": "Credential",
+      "description": "A general structure for representing an on-chain `Credential`.\n\n Credentials are always one of two kinds: a direct public/private key\n pair, or a script (native or Plutus).",
+      "anyOf": [
+        {
+          "title": "VerificationKey",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        },
+        {
+          "title": "Script",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1ScriptHash"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/address/PaymentCredential": {
+      "title": "PaymentCredential",
+      "description": "A general structure for representing an on-chain `Credential`.\n\n Credentials are always one of two kinds: a direct public/private key\n pair, or a script (native or Plutus).",
+      "anyOf": [
+        {
+          "title": "VerificationKey",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        },
+        {
+          "title": "Script",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1ScriptHash"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/address/StakeCredential": {
+      "title": "StakeCredential",
+      "description": "Represent a type of object that can be represented either inline (by hash)\n or via a reference (i.e. a pointer to an on-chain location).\n\n This is mainly use for capturing pointers to a stake credential\n registration certificate in the case of so-called pointer addresses.",
+      "anyOf": [
+        {
+          "title": "Inline",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "Pointer",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "slot_number",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "transaction_index",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "certificate_index",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/assets/AssetName": {
+      "title": "AssetName",
+      "dataType": "bytes"
+    },
+    "cardano/assets/PolicyId": {
+      "title": "PolicyId",
+      "dataType": "bytes"
+    },
+    "repayment/LoanDatum": {
+      "title": "LoanDatum",
+      "description": "=======================================================\n Loan Datum\n Represents a single loan state locked at the script\n =======================================================",
+      "anyOf": [
+        {
+          "title": "LoanDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "loan_id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "principal",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "interest_rate_n",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "interest_rate_d",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "start_time",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "due_time",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "borrower",
+              "$ref": "#/definitions/cardano~1address~1Address"
+            },
+            {
+              "title": "lender",
+              "$ref": "#/definitions/cardano~1address~1Address"
+            },
+            {
+              "title": "late_rate_n",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "late_rate_d",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "protocol_fee_n",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "protocol_fee_d",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "loan_nft_policy",
+              "$ref": "#/definitions/cardano~1assets~1PolicyId"
+            },
+            {
+              "title": "loan_nft_name",
+              "$ref": "#/definitions/cardano~1assets~1AssetName"
+            }
+          ]
+        }
+      ]
+    },
+    "repayment/RepaymentRedeemer": {
+      "title": "RepaymentRedeemer",
+      "description": "=======================================================\n Redeemer\n Passes the borrower identity for authorization\n =======================================================",
+      "anyOf": [
+        {
+          "title": "RepaymentRedeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "borrower",
+              "$ref": "#/definitions/cardano~1address~1Address"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

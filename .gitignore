@@ -4,3 +4,133 @@ artifacts/
 build/
 # Aiken's default documentation export
 docs/
+
+
+# Aiken Build Files
+/build/
+/onchain/build/
+**/aiken.lock
+**/packages/
+**/target/
+
+# Aiken Cache and Dependencies
+.aiken/
+.cache/
+.deps/
+*.lock
+*.compiled
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.yarn/
+.pnpm/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS generated files
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Frontend build outputs
+/dist/
+/repayment-frontend/dist/
+/repayment-frontend/node_modules/
+
+# TypeScript
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Vite cache
+.recommenders/
+.vite/
+
+# Test outputs
+**/test-results/
+**/.test/
+**/.tests/
+
+# Plutus related
+*.uplc
+*.plutus
+plutus.json
+
+# Large generated files
+*.wasm
+*.dump
+
+# Documentation auto-generated
+_site/
+.sass-cache/
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Windows
+[Tt]humbs.db
+Desktop.ini
+
+# Project specific
+plutus.json
+.env.production
+.env.development
+
+# Debug files
+*.pdb
+*.idb
+
+# Output files
+*.out
+*.exe
+*.suo
+*.user

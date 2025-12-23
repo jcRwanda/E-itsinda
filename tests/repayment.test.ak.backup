@@ -1,0 +1,659 @@
+module repayment.test
+use validators/repayment.ak
+use loan_utils
+use cardano/transaction.{Transaction, MockInput, MockOutput, MockValidityRange, OutputReference}
+use cardano/address.{Address, Credential}
+use aiken/collection/list
+
+ / Helper function to create test addresses
+fn create_test_address(prefix: ByteArray) -> Address {
+  let key_hash = ByteArray.slice(prefix, 0, 28)  // 28 bytes for key hash
+  let payment = Credential.VerificationKey(key_hash)
+  Address {
+    payment_credential: payment,
+    stake_credential: None,
+  }
+}
+
+ / Test 1: On-time repayment
+test test_on_time_repayment() {
+  let borrower = create_test_address(ByteArray.from_hex("00000000000000000000000000000000000000000000000000000000"))
+  let lender = create_test_address(ByteArray.from_hex("01000000000000000000000000000000000000000000000000000000"))
+  
+  let loan = LoanDatum {
+    loan_id: ByteArray.from_hex("4c4e2d31"),
+    principal: 10_000_000,  // 10 ADA (smaller for testing)
+    interest_rate_n: 10,     // 10%
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,  // +1 day
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,          // 1% per day late
+    late_rate_d: 100,
+    protocol_fee_n: 2,       // 2%
+    protocol_fee_d: 100,
+    loan_nft_policy: ByteArray.from_hex("706f6c696379"),
+    loan_nft_name: ByteArray.from_hex("4e465431")
+  }
+
+  // Calculate expected amounts
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  // Create NFT asset
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  // Create transaction
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(base)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(
+      start: loan.due_time  // Exactly on due date
+    ),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == True
+}
+
+ / Test 2: Late repayment
+test test_late_repayment() {
+  let borrower = create_test_address(ByteArray.from_hex("02000000000000000000000000000000000000000000000000000000"))
+  let lender = create_test_address(ByteArray.from_hex("03000000000000000000000000000000000000000000000000000000"))
+  
+  let loan = LoanDatum {
+    loan_id: ByteArray.from_hex("4c4e2d32"),
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: ByteArray.from_hex("706f6c696379"),
+    loan_nft_name: ByteArray.from_hex("4e465432")
+  }
+
+  // 2 days late
+  let tx_time = loan.due_time + (86_400 * 2)
+  let late_days = loan_utils.days_late(tx_time, loan.due_time)
+  
+  // Calculate with late fees
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let with_late = loan_utils.late_interest(base, late_days, loan.late_rate_n, loan.late_rate_d)
+  let fee = loan_utils.protocol_fee(with_late, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  // Create NFT asset
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(with_late)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(start: tx_time),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == True
+}
+
+ / Test 3: Wrong borrower should fail
+test test_wrong_borrower_fails() {
+  let borrower = create_test_address(ByteArray.from_hex("04000000000000000000000000000000000000000000000000000000"))
+  let lender = create_test_address(ByteArray.from_hex("05000000000000000000000000000000000000000000000000000000"))
+  let wrong_borrower = create_test_address(ByteArray.from_hex("06000000000000000000000000000000000000000000000000000000"))
+  
+  let loan = LoanDatum {
+    loan_id: ByteArray.from_hex("4c4e2d33"),
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: ByteArray.from_hex("706f6c696379"),
+    loan_nft_name: ByteArray.from_hex("4e465433")
+  }
+
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  // Create NFT asset
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: wrong_borrower,  // Wrong borrower!
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(base)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(start: loan.due_time),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: wrong_borrower }  // Wrong borrower in redeemer too
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == False  // Should fail
+}
+
+ / Test 4: Missing NFT should fail
+test test_missing_nft_fails() {
+  let borrower = create_test_address(ByteArray.from_hex("07000000000000000000000000000000000000000000000000000000"))
+  let lender = create_test_address(ByteArray.from_hex("08000000000000000000000000000000000000000000000000000000"))
+  
+  let loan = LoanDatum {
+    loan_id: ByteArray.from_hex("4c4e2d34"),
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: ByteArray.from_hex("706f6c696379"),
+    loan_nft_name: ByteArray.from_hex("4e465434")
+  }
+
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  // Transaction WITHOUT the NFT (empty inputs)
+  let tx = Transaction.Mock(
+    inputs: [],  // No inputs, so no NFT
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(base)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(start: loan.due_time),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == False  // Should fail
+}
+
+ / Test 5: Underpayment should fail
+test test_underpayment_fails() {
+  let borrower = create_test_address(ByteArray.from_hex("09000000000000000000000000000000000000000000000000000000"))
+  let lender = create_test_address(ByteArray.from_hex("0a000000000000000000000000000000000000000000000000000000"))
+  
+  let loan = LoanDatum {
+    loan_id: ByteArray.from_hex("4c4e2d35"),
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: ByteArray.from_hex("706f6c696379"),
+    loan_nft_name: ByteArray.from_hex("4e465435")
+  }
+
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+  
+  let underpayment = base - 1  // Pay 1 lovelace less than required
+
+  // Create NFT asset
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(underpayment)  // Underpayment!
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(start: loan.due_time),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == False  // Should fail
+}
+
+/ Test 6: Simple address creation test
+test test_address_creation() {
+  // Create a simple address
+  let payment = Credential.VerificationKey(
+    ByteArray.from_hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b")
+  )
+  
+  let address = Address {
+    payment_credential: payment,
+    stake_credential: None,
+  }
+  
+  // Verify it has the right structure
+  when address is {
+    Address { payment_credential: Credential.VerificationKey(key), stake_credential: None } ->
+      key == ByteArray.from_hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b")
+    _ -> False
+  }
+}
+
+/ Test 7: Loan utilities calculations
+test test_loan_utils_calculations() {
+  // Test days_late
+  let days1 = loan_utils.days_late(100, 150)  // Not late
+  let days2 = loan_utils.days_late(200, 150)  // 50 seconds late = 0 days
+  let days3 = loan_utils.days_late(150 + 86400, 150)  // 1 day late
+  
+  // Test interest calculations
+  let base = loan_utils.base_interest(100, 10, 100)  // 100 + 10% = 110
+  let late = loan_utils.late_interest(100, 2, 1, 100)  // 100 + 2% = 102
+  let fee = loan_utils.protocol_fee(100, 2, 100)  // 2% of 100 = 2
+  
+  days1 == 0 && days2 == 0 && days3 == 1 && base == 110 && late == 102 && fee == 2
+}
+
+use validators/repayment.ak
+use loan_utils
+use cardano/transaction.{Transaction, MockInput, MockOutput, MockValidityRange, OutputReference}
+use cardano/address.{Address, Credential}
+use aiken/collection/list
+
+/ Helper function to create test addresses
+fn create_test_address(hex_str: ByteArray) -> Address {
+  let payment = Credential.VerificationKey(hex_str)
+  Address {
+    payment_credential: payment,
+    stake_credential: None,
+  }
+}
+
+/ Test 1: On-time repayment
+test test_on_time_repayment() {
+  let borrower = create_test_address(#"00000000000000000000000000000000000000000000000000000000")
+  let lender = create_test_address(#"01000000000000000000000000000000000000000000000000000000")
+  
+  let loan = LoanDatum {
+    loan_id: #"4c4e2d31",
+    principal: 10_000_000,  // 10 ADA (smaller for testing)
+    interest_rate_n: 10,     // 10%
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,  // +1 day
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,          // 1% per day late
+    late_rate_d: 100,
+    protocol_fee_n: 2,       // 2%
+    protocol_fee_d: 100,
+    loan_nft_policy: #"706f6c696379",
+    loan_nft_name: #"4e465431"
+  }
+
+  // Calculate expected amounts
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  // Create NFT asset
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  // Create transaction - need to use proper IntervalBound for validity range
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(base)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(
+      start: loan.due_time  // MockValidityRange should handle conversion
+    ),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == True
+}
+
+/ Test 6: Simple address creation test
+test test_address_creation() {
+  // Create a simple address
+  let payment = Credential.VerificationKey(
+    #"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"
+  )
+  
+  let address = Address {
+    payment_credential: payment,
+    stake_credential: None,
+  }
+  
+  // Verify it has the right structure
+  when address is {
+    Address { payment_credential: Credential.VerificationKey(key), stake_credential: None } ->
+      key == #"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"
+    _ -> False
+  }
+}
+
+/ Test 7: Loan utilities calculations
+test test_loan_utils_calculations() {
+  // Test days_late
+  let days1 = loan_utils.days_late(100, 150)  // Not late
+  let days2 = loan_utils.days_late(200, 150)  // 50 seconds late = 0 days
+  let days3 = loan_utils.days_late(150 + 86400, 150)  // 1 day late
+  
+  // Test interest calculations
+  let base = loan_utils.base_interest(100, 10, 100)  // 100 + 10% = 110
+  let late = loan_utils.late_interest(100, 2, 1, 100)  // 100 + 2% = 102
+  let fee = loan_utils.protocol_fee(100, 2, 100)  // 2% of 100 = 2
+  
+  days1 == 0 && days2 == 0 && days3 == 1 && base == 110 && late == 102 && fee == 2
+}
+
+module repayment.test
+
+use validators/repayment.ak
+use loan_utils
+use cardano/transaction.{Transaction, MockInput, MockOutput, MockValidityRange, OutputReference}
+use cardano/address.{Address, Credential}
+use aiken/collection/list
+
+fn create_test_address(hex_str: ByteArray) -> Address {
+  let payment = Credential.VerificationKey(hex_str)
+  Address {
+    payment_credential: payment,
+    stake_credential: None,
+  }
+}
+
+test test_basic_calculations() {
+  let days1 = loan_utils.days_late(100, 150)
+  let days2 = loan_utils.days_late(200, 150)
+  let days3 = loan_utils.days_late(150 + 86400, 150)
+  
+  let base = loan_utils.base_interest(100, 10, 100)
+  let late = loan_utils.late_interest(100, 2, 1, 100)
+  let fee = loan_utils.protocol_fee(100, 2, 100)
+  
+  days1 == 0 && days2 == 0 && days3 == 1 && base == 110 && late == 102 && fee == 2
+}
+
+test test_on_time_repayment() {
+  let borrower = create_test_address(#"00000000000000000000000000000000000000000000000000000000")
+  let lender = create_test_address(#"01000000000000000000000000000000000000000000000000000000")
+  
+  let loan = LoanDatum {
+    loan_id: #"4c4e2d31",
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: #"706f6c696379",
+    loan_nft_name: #"4e465431"
+  }
+
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(base)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(
+      start: loan.due_time
+    ),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == True
+}
+
+test test_late_repayment() {
+  let borrower = create_test_address(#"02000000000000000000000000000000000000000000000000000000")
+  let lender = create_test_address(#"03000000000000000000000000000000000000000000000000000000")
+  
+  let loan = LoanDatum {
+    loan_id: #"4c4e2d32",
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: #"706f6c696379",
+    loan_nft_name: #"4e465432"
+  }
+
+  let tx_time = loan.due_time + (86_400 * 2)
+  let late_days = loan_utils.days_late(tx_time, loan.due_time)
+  
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let with_late = loan_utils.late_interest(base, late_days, loan.late_rate_n, loan.late_rate_d)
+  let fee = loan_utils.protocol_fee(with_late, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(with_late)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(start: tx_time),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == True
+}
+
+test test_wrong_borrower_fails() {
+  let borrower = create_test_address(#"04000000000000000000000000000000000000000000000000000000")
+  let lender = create_test_address(#"05000000000000000000000000000000000000000000000000000000")
+  let wrong_borrower = create_test_address(#"06000000000000000000000000000000000000000000000000000000")
+  
+  let loan = LoanDatum {
+    loan_id: #"4c4e2d33",
+    principal: 10_000_000,
+    interest_rate_n: 10,
+    interest_rate_d: 100,
+    start_time: 1_700_000_000,
+    due_time: 1_700_086_400,
+    borrower: borrower,
+    lender: lender,
+    late_rate_n: 1,
+    late_rate_d: 100,
+    protocol_fee_n: 2,
+    protocol_fee_d: 100,
+    loan_nft_policy: #"706f6c696379",
+    loan_nft_name: #"4e465433"
+  }
+
+  let base = loan_utils.base_interest(loan.principal, loan.interest_rate_n, loan.interest_rate_d)
+  let fee = loan_utils.protocol_fee(base, loan.protocol_fee_n, loan.protocol_fee_d)
+
+  let nft_asset = assets.singleton(loan.loan_nft_policy, loan.loan_nft_name, 1)
+
+  let tx = Transaction.Mock(
+    inputs: [
+      MockInput(
+        output_reference: OutputReference.Nil,
+        output: MockOutput(
+          address: wrong_borrower,
+          value: nft_asset
+        )
+      )
+    ],
+    outputs: [
+      MockOutput(
+        address: lender,
+        value: assets.lovelace(base)
+      ),
+      MockOutput(
+        address: loan_utils.protocol_address(),
+        value: assets.lovelace(fee)
+      )
+    ],
+    validity_range: MockValidityRange(start: loan.due_time),
+    signatories: []
+  )
+
+  let redeemer = RepaymentRedeemer { borrower: wrong_borrower }
+  let result = repayment.spend(Some(loan), redeemer, OutputReference.Nil, tx)
+  
+  result == False
+}
