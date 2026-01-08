@@ -11,6 +11,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // USSD endpoint for Africa's Talking
 app.use('/ussd/eitsinda', eItsindaRoute);
 
+// MoMo callback endpoint (using same router)
+app.use('/ussd', eItsindaRoute);
+
 // Simple homepage
 app.get('/', (req, res) => {
     res.send(`
@@ -20,7 +23,7 @@ app.get('/', (req, res) => {
             <title>E-Itsinda USSD Service</title>
             <style>
                 body { font-family: Arial, sans-serif; padding: 50px; text-align: center; }
-                h1 { color: #2563eb; }
+                h1 { color: #a007c2ff; }
             </style>
         </head>
         <body>

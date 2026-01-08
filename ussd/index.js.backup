@@ -1,0 +1,180 @@
+const express = require("express");
+const router = express.Router();
+const axios = require("axios");
+const { anchorProof } = require("./blockchainService");
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function normalizePhone(phone) {
+    // +25078... → 078...
+    return phone.replace(/^\+?250/, "");
+}
+
+async function checkPhoneAPI(phone) {
+    try {
+        const { data } = await axios.post(
+            "https://itsinda.garatech.rw/api/check-phone",
+            { mobile: phone }
+        );
+        return data;
+    } catch (err) {
+        console.error("API ERROR:", err.message);
+        return null;
+    }
+}
+
+/* ============================================================
+   MAIN USSD ENDPOINT
+============================================================ */
+router.post("/", async (req, res) => {
+    let { phoneNumber, text } = req.body;
+
+    // 1. Normalize phone number
+    phoneNumber = normalizePhone(phoneNumber);
+
+    // 2. Check user from your backend API
+    const api = await checkPhoneAPI("+250" + phoneNumber);
+
+    if (!api || api.status !== "success" || !api.data.registered) {
+        return res.send(
+            "END Ooh! Nta konti ufite kuri E-Itsinda.\n" +
+            "Mwiyandikishe kuri App cyangwa Web."
+        );
+    }
+
+    // 3. Extract user and group information
+    const user = api.data.user;
+    const group = user.branch;
+
+    // Attach user data to request (useful for flow handlers)
+    req.eUser = {
+        id: user.id,
+        phone: user.mobile,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        groupCode: group.code,
+        groupName: group.name
+    };
+
+    // 4. Start USSD menu
+    if (!text || text === "") {
+        return res.send(
+            `CON Murakaza neza ${user.firstname}!\n` +
+            `Itsinda: ${group.name}\n\n` +
+            "1. Ibyerekeye Itsinda\n" +
+            "2. Gutanga Umusanzu\n" +
+            "3. Gusaba Inguzanyo\n" +
+            "4. Reba Ubwizigame\n" +
+            "0. Sohoka"
+        );
+    }
+
+    // Handle menu
+    const steps = text.split("*");
+    const main = steps[0];
+
+    switch (main) {
+        case "1":
+            return res.send(await menuGroupDetails(req.eUser));
+
+        case "2": // Contribution amount input
+            if (steps.length === 1) return res.send("CON Shyiramo amafaranga ugiye gutanga:");
+            return res.send(await confirmContribution(req.eUser, steps[1]));
+
+        case "3": // Loan request amount input
+            if (steps.length === 1) return res.send("CON Shyiramo amafaranga wifuza:");
+            return res.send(await confirmLoan(req.eUser, steps[1]));
+
+        case "4":
+            return res.send(await checkBalance(req.eUser));
+
+        case "0":
+            return res.send("END Murakoze gukoresha E-Itsinda!");
+
+        default:
+            return res.send("END Ibyo wahisemo ntibyemewe.");
+    }
+});
+
+/* ============================================================
+   MENUS & ACTION HANDLERS
+============================================================ */
+
+async function menuGroupDetails(user) {
+    return (
+        "CON Ibyerekeye Itsinda:\n" +
+        `Izina: ${user.groupName}\n` +
+        `Kode: ${user.groupCode}\n\n` +
+        "1. Reba Ubwizigame\n" +
+        "2. Tanga umusanzu\n" +
+        "3. Saba inguzanyo\n" +
+        "0. Subira"
+    );
+}
+
+/* ---------------------- Contribution ---------------------- */
+async function confirmContribution(user, amount) {
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+        return "END Umubare winjiye si wo.";
+    }
+
+    // Generate internal transaction ID
+    const momoTxId = "MOMO_" + Date.now();
+
+    // Prepare blockchain payload
+    const payload = {
+        phone: user.phone,
+        group: user.groupCode,
+        type: "contribution",
+        amount: Number(amount),
+        momo_tx_id: momoTxId,
+        session_id: "ussd_" + Date.now(),
+        timestamp: new Date().toISOString()
+    };
+
+    // Anchor proof on Cardano blockchain
+    const result = await anchorProof(payload);
+
+    if (!result.ok) {
+        console.error("Blockchain anchor failed:", result.error);
+        return (
+            `END Umusanzu wa ${amount} RWF wakiriwe!\n` +
+            `Itsinda: ${user.groupName}\n` +
+            `(Blockchain: ${result.error})`
+        );
+    }
+
+    // Success - show transaction hash
+    const shortHash = result.txHash.substring(0, 12);
+    return (
+        `END Umusanzu wa ${amount} RWF wakiriwe!\n` +
+        `Itsinda: ${user.groupName}\n` +
+        `TX: ${shortHash}...\n` +
+        `View: preview.cardanoscan.io/transaction/${result.txHash}`
+    );
+}
+
+/* ---------------------- Loan Request ---------------------- */
+async function confirmLoan(user, amount) {
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+        return "END Umubare winjiye si wo.";
+    }
+
+    // Later: store loan request → DB or blockchain
+    return (
+        `END Icyifuzo cyawe cyo gusaba ${amount} RWF cyakiriwe!\n` +
+        `Itsinda: ${user.groupName}`
+    );
+}
+
+/* ---------------------- Balance ---------------------- */
+async function checkBalance(user) {
+    // Placeholder until you connect balance API / blockchain
+    return (
+        "END Ubwizigame bwawe buracyavugururwa.\n" +
+        `User: ${user.firstname}`
+    );
+}
+
+module.exports = router;

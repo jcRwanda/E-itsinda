@@ -6,3 +6,8 @@ logs/
 public_html/
 itsinda/
 ussd-backup/
+keys/
+ussd/keys/
+*.skey
+*.vkey
+*.addr
